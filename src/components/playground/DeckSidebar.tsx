@@ -140,7 +140,7 @@ export function DeckSidebar() {
           <button
             type="button"
             onClick={() => {
-              if (activeDeckId) {
+              if (viewMode === "detail" && activeDeckId) {
                 setDeckEditorOpen(true);
               } else {
                 setDeckManagerOpen(true);
@@ -154,7 +154,7 @@ export function DeckSidebar() {
             "
           >
             <Library className="h-4 w-4" />
-            {activeDeckId ? "덱 편집" : "Deck Manager"}
+            {viewMode === "detail" ? "덱 편집" : "덱 관리"}
           </button>
         </div>
       </aside>

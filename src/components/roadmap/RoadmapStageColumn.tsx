@@ -53,13 +53,15 @@ export function RoadmapStageColumn({
     setIsEditingTitle(false);
   };
 
+  const isEmpty = stage.tasks.length === 0;
+
   return (
     <div
       ref={setNodeRef}
       className={`
         flex min-w-[300px] flex-col rounded-xl border-2 border-neutral-200
         bg-white p-4 shadow-sm transition-colors
-        h-[70vh] min-h-[420px] max-h-[720px]
+        ${isEmpty ? "w-[300px] flex-shrink-0 aspect-square" : "w-[300px] min-h-[300px] flex-1"}
         ${isOver ? "border-neutral-400 bg-neutral-50" : ""}
       `}
     >

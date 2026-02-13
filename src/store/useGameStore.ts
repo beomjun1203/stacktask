@@ -23,6 +23,8 @@ export interface RoadmapTask {
   id: string;
   title: string;
   status: RoadmapTaskStatus;
+  /** 덱 카드를 드래그해 만든 할 일인 경우, 해당 카드 id (할 일 삭제 시 덱은 그대로 유지) */
+  linkedCardId?: string;
 }
 
 export interface RoadmapStage {
@@ -58,21 +60,28 @@ export interface GameState {
   field: Card[];
   decks: Deck[];
   activeDeckId: string | null;
+  roadmapDeckId: string | null;
   roadmapStages: RoadmapStage[];
   cardTypes: string[];
   costUnits: string[];
   setActiveDeckId: (id: string | null) => void;
+  setRoadmapDeckId: (id: string | null) => void;
   moveCardToField: (card: Card) => void;
   moveCardToDeck: (cardId: string) => void;
   reorderFieldCards: (oldIndex: number, newIndex: number) => void;
   removeCardFromField: (cardId: string) => void;
+  clearField: () => void;
   createDeck: (title: string) => void;
   updateDeck: (deckId: string, newCards: Card[]) => void;
   deleteDeck: (deckId: string) => void;
   addStage: (index: number) => void;
   deleteStage: (stageId: string) => void;
   updateStageTitle: (stageId: string, newTitle: string) => void;
-  addTask: (stageId: string, title: string) => void;
+  addTask: (
+    stageId: string,
+    title: string,
+    options?: { linkCard?: boolean; linkedCardId?: string }
+  ) => void;
   deleteTask: (stageId: string, taskId: string) => void;
   updateTask: (stageId: string, taskId: string, newTitle: string) => void;
   moveTask: (
@@ -93,6 +102,7 @@ export const useGameStore = create<GameState>((set) => ({
   field: [],
   decks: DUMMY_DECKS,
   activeDeckId: null,
+  roadmapDeckId: null,
   cardTypes: ["action", "resource", "skill", "event", "wild"],
   costUnits: ["시간", "분", "원"],
 
@@ -101,6 +111,8 @@ export const useGameStore = create<GameState>((set) => ({
       activeDeckId: id,
       field: id !== state.activeDeckId ? [] : state.field,
     })),
+
+  setRoadmapDeckId: (id) => set({ roadmapDeckId: id }),
 
   moveCardToField: (card) =>
     set((state) => ({ field: [...state.field, card] })),
@@ -120,6 +132,8 @@ export const useGameStore = create<GameState>((set) => ({
       field: state.field.filter((c) => c.id !== cardId),
     })),
 
+  clearField: () => set({ field: [] }),
+
   createDeck: (title) =>
     set((state) => ({
       decks: [
@@ -138,6 +152,8 @@ export const useGameStore = create<GameState>((set) => ({
   deleteDeck: (deckId) =>
     set((state) => ({
       decks: state.decks.filter((d) => d.id !== deckId),
+      roadmapDeckId:
+        state.roadmapDeckId === deckId ? null : state.roadmapDeckId,
     })),
 
   roadmapStages: INITIAL_ROADMAP_STAGES,
@@ -160,6 +176,7 @@ export const useGameStore = create<GameState>((set) => ({
   deleteStage: (stageId) =>
     set((state) => {
       const filtered = state.roadmapStages.filter((s) => s.id !== stageId);
+      if (filtered.length < 2) return state;
       return {
         roadmapStages: filtered.map((s, i) => ({ ...s, index: i })),
       };
@@ -172,24 +189,39 @@ export const useGameStore = create<GameState>((set) => ({
       ),
     })),
 
-  addTask: (stageId, title) =>
-    set((state) => ({
-      roadmapStages: state.roadmapStages.map((stage) =>
+  addTask: (stageId, title, options) =>
+    set((state) => {
+      const linkCard = options?.linkCard !== false;
+      const newTask = {
+        id: generateId("task"),
+        title,
+        status: "active" as RoadmapTaskStatus,
+        ...(options?.linkedCardId && { linkedCardId: options.linkedCardId }),
+      };
+      const updatedStages = state.roadmapStages.map((stage) =>
         stage.id === stageId
-          ? {
-              ...stage,
-              tasks: [
-                ...stage.tasks,
-                {
-                  id: generateId("task"),
-                  title,
-                  status: "active" as RoadmapTaskStatus,
-                },
-              ],
-            }
+          ? { ...stage, tasks: [...stage.tasks, newTask] }
           : stage
-      ),
-    })),
+      );
+      if (!linkCard || !state.roadmapDeckId) {
+        return { roadmapStages: updatedStages };
+      }
+      const deck = state.decks.find((d) => d.id === state.roadmapDeckId);
+      if (!deck) return { roadmapStages: updatedStages };
+      const newCard: Card = {
+        id: generateId("card"),
+        title,
+        costValue: 0,
+        costUnit: state.costUnits[0] ?? "시간",
+        type: state.cardTypes[0] ?? "action",
+      };
+      const updatedDecks = state.decks.map((d) =>
+        d.id === state.roadmapDeckId
+          ? { ...d, cards: [...d.cards, newCard] }
+          : d
+      );
+      return { roadmapStages: updatedStages, decks: updatedDecks };
+    }),
 
   deleteTask: (stageId, taskId) =>
     set((state) => ({

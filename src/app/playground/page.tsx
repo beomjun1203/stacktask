@@ -27,6 +27,7 @@ export default function PlaygroundPage() {
   const moveCardToField = useGameStore((s) => s.moveCardToField);
   const moveCardToDeck = useGameStore((s) => s.moveCardToDeck);
   const reorderFieldCards = useGameStore((s) => s.reorderFieldCards);
+  const clearField = useGameStore((s) => s.clearField);
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -111,8 +112,16 @@ export default function PlaygroundPage() {
     >
       <div className="flex h-screen flex-col bg-neutral-100 md:flex-row overflow-hidden">
         <main className="flex flex-1 flex-col p-6 overflow-hidden">
-          <div className="mb-4 flex-shrink-0">
+          <div className="mb-4 flex flex-shrink-0 items-center justify-between gap-4">
             <BackToLobbyLink />
+            <button
+              type="button"
+              onClick={clearField}
+              disabled={field.length === 0}
+              className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              카드 초기화
+            </button>
           </div>
           <div className="flex flex-1 items-center justify-center overflow-hidden">
             <DropZone />
